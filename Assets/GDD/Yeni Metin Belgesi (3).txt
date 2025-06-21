@@ -1,0 +1,151 @@
+**🎯 Gravity Swipe - 🎮 Oyun Tasarım Dökümanı (GDD)**
+
+---
+
+## 📋 Genel Bilgi
+
+* **🎮 Oyun Adı:** Gravity Swipe
+* **🕹 Tür:** Hyper-Casual
+* **📱 Platform:** Android (📦 Play Store yayınlanacak)
+* **👆 Kontrol:** Parmağı ⬅️➡️ kaydır (Swipe)
+* **🎯 Amaç:** Sonsuz 🔹 platformdan 🛎 düşmeden geç, ⭐ skor yap
+* **🎮 Mekanik:** Tek parmakla 🌐 topu sola-sağa kaydırma
+* **🔥 Zorluk:** Otomatik artan ↗️ zorluk seviyesi (platform hızı ⚡ + daralan geçiş)
+
+---
+
+## ✨ Oynanış Mekaniği
+
+* Oyuncu bir 🌐 **topu** kontrol eder.
+* Top sabit bir zemin 🌌 üzerinde yer alır, ekran ⬆️⬇️ akar.
+* Parmağı ⬅️➡️ kaydırarak topu yatay eksende hareket ettirir.
+* Yukarıdan sürekli 🛠 platformlar düşer; bu platformlarda bir "⬜ boşluk" vardır.
+* Oyuncu, topu bu ⬜ boşluktan geçirerek platformlardan kurtulmaya ⚡ çalışır.
+* ❌ Çarpışma olursa oyun biter.
+
+---
+
+## ⚡ Zorluk Sistemi
+
+* Oyun ilerledikçe 🔼 zorluk artar:
+
+  * Platformlar daha hızlı iner ⬇️
+  * Boşluklar ⬜ daralır
+  * Arka plan renkleri 🎨 değişir (görsel 🚀 karmaşa yaratmak için)
+* Belirli ⭐ skor aralıklarında artan zorluk parametreleri uygulanacak
+
+---
+
+## 📈 Skor Sistemi
+
+* ⭐ Skor, oyuncunun hayatta kaldığı süreye ⌛ bağlı olarak artar
+* Skor ekranı oyun oynanırken görünür
+* 🛌 Oyun bitince en yüksek skor kaydedilir (PlayerPrefs ile)
+
+---
+
+## 🧭 Oyuncu Kontrolü
+
+* Sadece **Swipe** ↔️ hareketi (parmakla)
+* Swipe hassasiyeti ⚙ ayarlanabilir olacak
+* ↑ Editor test desteği (Mouse)
+
+---
+
+## 🧩 UI Sistemleri
+
+* Ana 🏠 Menü: “▶ Play”, ⚙ “Settings”, ❌ “Quit”
+* Skor Gösterimi: ⭐ Anlık + 🌟 En yüksek skor
+* Oyun Bitti Paneli: ❌ skor + 💸 reklamla canlan
+* Ayarlar: 🎧 Ses, 💥 Titreşim, ↔️ Swipe ayarı
+
+---
+
+## 💰 Para Kazanma
+
+* **🛎 Unity Ads**:
+
+  * ❌ Öldükten sonra: "Canlanmak için 💱 reklam izle"
+  * Skor artışında ⛔ Reklam
+* **🎨 Skin Sistemi:** 📲 Reklam izleyerek farklı toplar aç
+
+---
+
+## 🔁 Sonsuzluk & Platform Sistemi
+
+* Platformlar yukarıdan düzenli ⌛ aralıklarla spawn olur
+* Her platform prefab 🛠 olarak ortasında rastgele bir ⬜ boşluk olur
+* Ekrandan ❌ çıkarsa silinir
+
+---
+
+## 🎨 Görsel Asset Listesi
+
+### 🌅 Ortam:
+
+* 🌍 Arka plan: Dinamik 🔹 degrade (neon veya pastel)
+* ✨ Partikül: Sparkle efekti (boşluktan geçerken)
+
+### 👤 Oyuncu:
+
+* 🌐 Top Sprite’ı: Renkli, ateşli, klasik
+* 3-5 farklı top skin'i
+
+### 🧱 Platformlar:
+
+* 2D dikdörtgen sprite 🔹 (düz veya gradient)
+* Işıksız sade tasarım
+
+### 🖥 UI:
+
+* ✒ Minimal font (Montserrat / Roboto)
+* 📦 Flat UI butonlar
+* ⭐ Skor barı (yarı saydam)
+* ❌ Oyun sonu paneli (Replay ⟳, Revive ➕, Menu 🏠)
+
+---
+
+## 🔊 Ses & Müzik
+
+### SFX:
+
+* 👆 Swipe sesi
+* 🧰 Platforma çarpma sesi (bonk / cam)
+* ✨ Sparkle sesi
+* 🖱 UI tıklama sesi
+* ➕ Canlanma sesi
+
+### 🎵 Müzik:
+
+* 🎧 Arka plan: Chill synthwave / lo-fi loop
+* 🛑 Oyun sonu jingle
+* 🎼 Menüde ambient
+
+> **💡 Not:** Sesler için 🌐 ücretsiz kaynaklar: freesound.org, kenney.nl, itch.io
+
+---
+
+## 🧠 Geliştirme İpuçları
+
+* Oyuncu `Rigidbody2D` ile hareket eder
+* "PlatformSpawner" rastgele boşluklu platform üretir
+* Skora bağlı olarak `spawnInterval`, `gapWidth`, `platformSpeed` değişir
+
+---
+
+## 🚀 Yayın Planı
+
+* 🎯 Hedef: Play Store
+* 🛠 Prototip: 7 gün
+* 👥 Test yayını: 10 kişi
+* ✅ Google Play + Unity Ads + Analytics
+
+---
+
+## ✏ Notlar
+
+* 🎯 Skor ve geri bildirim çok önemli
+* 🎮 "Easy to start, hard to master" prensibi
+* 🧲 30 saniyede oyuncuyu bağlamak hedef
+
+---
