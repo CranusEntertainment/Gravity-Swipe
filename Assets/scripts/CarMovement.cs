@@ -1,93 +1,59 @@
 ﻿using UnityEngine;
-
+using System.Collections;
 public class CarMovement : MonoBehaviour
 {
     [Header("İleri (Z ↓) Hareket")]
     public float forwardSpeed = 10f;
 
     [Header("Sağa-Sola Hareket")]
-    public float horizontalSpeed = 0.1f;
+    public float horizontalSpeed = 1f;
     public float maxX = 4f;
 
-    private Vector2 touchStartPosition;
-    private bool isTouching = false;
     private float targetX;
     private Quaternion startRotation;
-    private float initialTargetX;
     private float currentTiltZ = 0f;
-    private bool isSwipeDetected = false;
-    private float swipeThreshold = 0.02f; // Ekran genişliğine göre minimum swipe mesafesi
-
 
     [Header("Eğim Ayarları")]
-    public float tiltAmount = 15f;         // Maksimum eğim derecesi
-    public float tiltSmooth = 5f;          // Eğimin dönüş hızı
+    public float tiltAmount = 15f;
+    public float tiltSmooth = 5f;
 
     [Header("Hızlanma Ayarları")]
-    public float boostedSpeed = 20f;     // Hızlanınca çıkacağı hız
-    public float liftAmount = 15f;       // Ön kaldırma açısı
-    private bool isAccelerating = false; // Basılı tutuluyor mu
+    public float boostedSpeed = 20f;
+    public float liftAmount = 15f;
+    private bool isAccelerating = false;
 
+    // --- Yön Kontrol Bayrakları ---
+    private bool isMovingLeft = false;
+    private bool isMovingRight = false;
 
     void Awake()
     {
-        startRotation = transform.rotation;
         targetX = transform.position.x;
+        startRotation = transform.rotation;
     }
 
     void Update()
     {
-        bool touchHeld = Input.touchCount > 0 && Input.GetTouch(0).phase != TouchPhase.Ended && Input.GetTouch(0).phase != TouchPhase.Canceled;
-
-        // Sadece dokunuluyorsa VE swipe yapılmıyorsa hızlan
-        isAccelerating = touchHeld && !isSwipeDetected;
-
         MoveForward();
-        HandleSwipe();
+        HandleHorizontalInput();
         ApplyHorizontalMovement();
         ApplyTiltEffect();
     }
+
     void MoveForward()
     {
         float speed = isAccelerating ? boostedSpeed : forwardSpeed;
         transform.position += new Vector3(0f, 0f, -speed * Time.deltaTime);
     }
-    void HandleSwipe()
+
+    void HandleHorizontalInput()
     {
-        if (Input.touchCount == 0)
-        {
-            isTouching = false;
-            isSwipeDetected = false;
-            return;
-        }
+        if (isMovingLeft)
+            targetX = Mathf.Clamp(targetX - horizontalSpeed * Time.deltaTime * 50f, -maxX, maxX);
 
-        Touch touch = Input.GetTouch(0);
-
-        if (touch.phase == TouchPhase.Began)
-        {
-            touchStartPosition = touch.position;
-            isTouching = true;
-            isSwipeDetected = false;
-            initialTargetX = targetX;
-        }
-        else if (touch.phase == TouchPhase.Moved && isTouching)
-        {
-            float swipeDelta = (touch.position.x - touchStartPosition.x) / Screen.width;
-
-            // Eğer belli bir eşiği geçerse swipe say
-            if (Mathf.Abs(swipeDelta) > swipeThreshold)
-            {
-                isSwipeDetected = true;
-                targetX = Mathf.Clamp(initialTargetX + swipeDelta * horizontalSpeed * 10f, -maxX, maxX);
-            }
-        }
-        else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-        {
-            isTouching = false;
-            isSwipeDetected = false;
-        }
+        if (isMovingRight)
+            targetX = Mathf.Clamp(targetX + horizontalSpeed * Time.deltaTime * 50f, -maxX, maxX);
     }
-
 
     void ApplyHorizontalMovement()
     {
@@ -100,22 +66,68 @@ public class CarMovement : MonoBehaviour
     {
         float delta = targetX - transform.position.x;
 
-        float targetTiltZ = 0f;
-        if (Mathf.Abs(delta) > 0.01f)
-            targetTiltZ = Mathf.Clamp(delta * tiltAmount, -tiltAmount, tiltAmount);
-
+        float targetTiltZ = Mathf.Clamp(delta * tiltAmount, -tiltAmount, tiltAmount);
         currentTiltZ = Mathf.Lerp(currentTiltZ, targetTiltZ, Time.deltaTime * tiltSmooth);
 
         float targetTiltX = isAccelerating ? -liftAmount : 0f;
 
-        // Ekstra smooth dönüş için X ekseni tilt'ini ayrı yumuşatabiliriz (opsiyonel)
-        Quaternion targetRotation = startRotation * Quaternion.Euler(currentTiltZ, 0f, targetTiltZ);
+        Quaternion tiltRotation = Quaternion.Euler(currentTiltZ, 0f, 0f);
         Quaternion liftRotation = Quaternion.Euler(targetTiltX, 0f, 0f);
 
-        // İki rotasyonu birleştir
-        Quaternion combinedRotation = targetRotation * liftRotation;
-
+        Quaternion combinedRotation = startRotation * tiltRotation * liftRotation;
         transform.rotation = Quaternion.Slerp(transform.rotation, combinedRotation, Time.deltaTime * tiltSmooth);
     }
 
+    // --- UI Butonlar için kontrol fonksiyonları ---
+
+    public void MoveLeft()
+    {
+        targetX = Mathf.Clamp(targetX - horizontalSpeed * 10f, -maxX, maxX);
+    }
+
+    public void MoveRight()
+    {
+        targetX = Mathf.Clamp(targetX + horizontalSpeed * 10f, -maxX, maxX);
+    }
+
+    public void Boost()
+    {
+        if (!isAccelerating) // zaten hızlanıyorsa tekrar başlatma
+            StartCoroutine(TemporaryBoost());
+    }
+
+    private IEnumerator TemporaryBoost()
+    {
+        isAccelerating = true;
+
+        float boostTime = 1.5f; // Kaç saniye hızlanacak
+        float elapsed = 0f;
+
+        float startTiltX = 0f;
+        float endTiltX = -liftAmount; // Yukarı kalkma miktarı (X ekseninde)
+
+        while (elapsed < boostTime)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / boostTime;
+
+            // Yavaş yavaş ön kaldırma (başta kaldır, sonda indir)
+            float tiltX = Mathf.Lerp(endTiltX, startTiltX, t);
+            ApplyLiftRotation(tiltX);
+
+            yield return null;
+        }
+
+        isAccelerating = false;
+        ApplyLiftRotation(0f); // Düz konuma getir
+    }
+    private void ApplyLiftRotation(float tiltX)
+    {
+        // Z ekseni (yan eğim) yine delta'ya bağlı
+        float delta = targetX - transform.position.x;
+        float targetTiltZ = Mathf.Clamp(delta * tiltAmount, -tiltAmount, tiltAmount);
+
+        Quaternion targetRotation = startRotation * Quaternion.Euler(tiltX, 0f, targetTiltZ);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * tiltSmooth);
+    }
 }
