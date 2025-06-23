@@ -9,7 +9,7 @@ public class CarMovement : MonoBehaviour
     public float boostedSpeed = 20f; // Boost aktifkenki hız
     public float boostLerpSpeed = 5f; // Hız geçiş yumuşaklığı
 
-    private float currentSpeed; // Gerçek zamanlı ileri hızı
+    public float currentSpeed; // Gerçek zamanlı ileri hızı
 
     [Header("Sağa–Sola Hareket")]
     public float sideSpeed = 5f;
@@ -23,6 +23,8 @@ public class CarMovement : MonoBehaviour
     [Header("Post-Processing Ayarları")]
     public Volume globalVolume;
     private LensDistortion lensDistortion;
+    private ChromaticAberration chromaticAberration; // Yeni efekt
+    private MotionBlur motionBlur;
 
 
     private int moveDirection = 0; // -1: sola, 1: sağa, 0: düz
@@ -31,10 +33,18 @@ public class CarMovement : MonoBehaviour
     void Start()
     {
         currentSpeed = forwardSpeed;
-        // LensDistortion bileşenini Volume içinden al
         if (globalVolume != null && globalVolume.profile.TryGet(out lensDistortion))
         {
-            lensDistortion.intensity.value = 0f; // Başlangıçta bozulma yok
+            lensDistortion.intensity.value = 0f;
+        }
+        if (globalVolume != null && globalVolume.profile.TryGet(out motionBlur))
+        {
+            motionBlur.intensity.value = 0f; // Başlangıçta kapalı
+        }
+        // Chromatic Aberration bileşenini al
+        if (globalVolume != null && globalVolume.profile.TryGet(out chromaticAberration))
+        {
+            chromaticAberration.intensity.value = 0f; // Başlangıçta kapalı
         }
     }
 
@@ -58,14 +68,16 @@ public class CarMovement : MonoBehaviour
 
         if (lensDistortion != null)
         {
-            // Hızı normalize et (0 = normal hız, 1 = boost hızı)
             float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
-
-            // Hıza bağlı olarak intensity'yi ayarla (0 → -0.5)
             float targetDistortion = Mathf.Lerp(0f, -0.5f, speedRatio);
-
-            // Uygula
             lensDistortion.intensity.value = targetDistortion;
+        }
+
+        if (chromaticAberration != null)
+        {
+            // Hız arttıkça bulanıklık şiddetini artır
+            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
+            motionBlur.intensity.value = Mathf.Lerp(0f, 0.5f, speedRatio);
         }
         // Yatış açısını belirle
         float targetZRotation = 0f;
