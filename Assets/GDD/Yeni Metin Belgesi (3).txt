@@ -149,3 +149,36 @@
 * 🧲 30 saniyede oyuncuyu bağlamak hedef
 
 ---
+
+
+ek planlar ;
+* 🎨 Yeni skinler ve platform temaları eklenebilir
+* 🏆 Haftalık liderlik tablosu
+* 🎉 Etkinlikler (🎃 Cadılar Bayramı, 🎄 Yılbaşı temaları)
+* 🛠 Geliştirici geri bildirimleri ile sürekli iyileştirme
+* 📈 Analitik verilerle oyun dengesi ayarlama
+* 🎥 Sosyal medya entegrasyonu (skor paylaşımı)
+* 🛒 Oyun içi satın alma seçenekleri (premium skinler, reklamları kaldırma)
+* 🎮 Oyun içi rehber (tutorial) eklenebilir
+* 🧩 Zorluk seviyeleri (kolay, orta, zor) eklenebilir
+* 🏅 Başarımlar (achievements) sistemi
+* 🕹 Çoklu dil desteği (Türkçe, İngilizce, İspanyolca vb.)
+* 📊 Oyuncu geri bildirim anketleri
+* 🛠 Oyun içi hata raporlama sistemi
+* 🎥 Oyun içi video kaydı ve paylaşım özelliği
+* 🏆 Özel etkinlikler için ödüller (örneğin, belirli bir süre içinde en yüksek skoru yapanlara özel skinler)
+* 🧑‍🤝‍🧑 Çok oyunculu mod (sıralı yarışma)
+* 🏁 Sezonluk içerik güncellemeleri (yeni platformlar, skinler, arka planlar)
+* 📅 Takvim entegrasyonu (günlük görevler, haftalık ödüller)
+* 🛠 Geliştirici blogu veya sosyal medya hesapları üzerinden güncellemeler ve topluluk etkileşimi
+* 🎨 Topluluk tarafından oluşturulan içerik (modlar, skinler)
+* 🏆 Oyun içi başarılar ve ödüller sistemi
+* 📈 Oyun içi istatistikler (ortalama skor, en uzun süre hayatta kalma vb.)
+* 🛠 Oyun içi rehber ve ipuçları
+* 🎉 Özel günlerde (yılbaşı, Cadılar Bayramı) temalı içerikler
+* 🏅 Oyuncu profili ve istatistik sayfası
+* 📊 Oyun içi analiz ve geri bildirim sistemi
+* 🛒 Oyun içi mağaza (premium skinler, reklamları kaldırma)
+
+
+oyun açıldığında volume ayarından geliştirmeler olacak. 

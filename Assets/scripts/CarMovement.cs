@@ -1,133 +1,89 @@
 ﻿using UnityEngine;
-using System.Collections;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
 public class CarMovement : MonoBehaviour
 {
-    [Header("İleri (Z ↓) Hareket")]
+    [Header("İleri Gitme (Z ekseni azalacak)")]
     public float forwardSpeed = 10f;
+    public float boostedSpeed = 20f; // Boost aktifkenki hız
+    public float boostLerpSpeed = 5f; // Hız geçiş yumuşaklığı
 
-    [Header("Sağa-Sola Hareket")]
-    public float horizontalSpeed = 1f;
+    private float currentSpeed; // Gerçek zamanlı ileri hızı
+
+    [Header("Sağa–Sola Hareket")]
+    public float sideSpeed = 5f;
     public float maxX = 4f;
+    public float minX = -4f;
 
-    private float targetX;
-    private Quaternion startRotation;
-    private float currentTiltZ = 0f;
+    [Header("Yatış Efekti")]
+    public float tiltAmount = 10f;
+    public float tiltSpeed = 5f;
 
-    [Header("Eğim Ayarları")]
-    public float tiltAmount = 15f;
-    public float tiltSmooth = 5f;
+    [Header("Post-Processing Ayarları")]
+    public Volume globalVolume;
+    private LensDistortion lensDistortion;
 
-    [Header("Hızlanma Ayarları")]
-    public float boostedSpeed = 20f;
-    public float liftAmount = 15f;
-    private bool isAccelerating = false;
 
-    // --- Yön Kontrol Bayrakları ---
-    private bool isMovingLeft = false;
-    private bool isMovingRight = false;
+    private int moveDirection = 0; // -1: sola, 1: sağa, 0: düz
+    private bool isBoosting = false;
 
-    void Awake()
+    void Start()
     {
-        targetX = transform.position.x;
-        startRotation = transform.rotation;
+        currentSpeed = forwardSpeed;
+        // LensDistortion bileşenini Volume içinden al
+        if (globalVolume != null && globalVolume.profile.TryGet(out lensDistortion))
+        {
+            lensDistortion.intensity.value = 0f; // Başlangıçta bozulma yok
+        }
     }
 
     void Update()
     {
-        MoveForward();
-        HandleHorizontalInput();
-        ApplyHorizontalMovement();
-        ApplyTiltEffect();
-    }
+        // Boost kontrolü (yumuşak geçişli hız değişimi)
+        float targetSpeed = isBoosting ? boostedSpeed : forwardSpeed;
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * Time.deltaTime);
 
-    void MoveForward()
-    {
-        float speed = isAccelerating ? boostedSpeed : forwardSpeed;
-        transform.position += new Vector3(0f, 0f, -speed * Time.deltaTime);
-    }
+        // Sürekli ileri hareket (Z ↓)
+        transform.Translate(Vector3.back * currentSpeed * Time.deltaTime);
 
-    void HandleHorizontalInput()
-    {
-        if (isMovingLeft)
-            targetX = Mathf.Clamp(targetX - horizontalSpeed * Time.deltaTime * 50f, -maxX, maxX);
-
-        if (isMovingRight)
-            targetX = Mathf.Clamp(targetX + horizontalSpeed * Time.deltaTime * 50f, -maxX, maxX);
-    }
-
-    void ApplyHorizontalMovement()
-    {
-        Vector3 currentPosition = transform.position;
-        currentPosition.x = Mathf.Lerp(currentPosition.x, targetX, 10f * Time.deltaTime);
-        transform.position = currentPosition;
-    }
-
-    void ApplyTiltEffect()
-    {
-        float delta = targetX - transform.position.x;
-
-        float targetTiltZ = Mathf.Clamp(delta * tiltAmount, -tiltAmount, tiltAmount);
-        currentTiltZ = Mathf.Lerp(currentTiltZ, targetTiltZ, Time.deltaTime * tiltSmooth);
-
-        float targetTiltX = isAccelerating ? -liftAmount : 0f;
-
-        Quaternion tiltRotation = Quaternion.Euler(currentTiltZ, 0f, 0f);
-        Quaternion liftRotation = Quaternion.Euler(targetTiltX, 0f, 0f);
-
-        Quaternion combinedRotation = startRotation * tiltRotation * liftRotation;
-        transform.rotation = Quaternion.Slerp(transform.rotation, combinedRotation, Time.deltaTime * tiltSmooth);
-    }
-
-    // --- UI Butonlar için kontrol fonksiyonları ---
-
-    public void MoveLeft()
-    {
-        targetX = Mathf.Clamp(targetX - horizontalSpeed * 10f, -maxX, maxX);
-    }
-
-    public void MoveRight()
-    {
-        targetX = Mathf.Clamp(targetX + horizontalSpeed * 10f, -maxX, maxX);
-    }
-
-    public void Boost()
-    {
-        if (!isAccelerating) // zaten hızlanıyorsa tekrar başlatma
-            StartCoroutine(TemporaryBoost());
-    }
-
-    private IEnumerator TemporaryBoost()
-    {
-        isAccelerating = true;
-
-        float boostTime = 1.5f; // Kaç saniye hızlanacak
-        float elapsed = 0f;
-
-        float startTiltX = 0f;
-        float endTiltX = -liftAmount; // Yukarı kalkma miktarı (X ekseninde)
-
-        while (elapsed < boostTime)
+        // Sağa–sola hareket
+        if (moveDirection != 0)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / boostTime;
-
-            // Yavaş yavaş ön kaldırma (başta kaldır, sonda indir)
-            float tiltX = Mathf.Lerp(endTiltX, startTiltX, t);
-            ApplyLiftRotation(tiltX);
-
-            yield return null;
+            float xMove = moveDirection * sideSpeed * Time.deltaTime;
+            Vector3 newPos = transform.position + new Vector3(xMove, 0f, 0f);
+            newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
+            transform.position = newPos;
         }
 
-        isAccelerating = false;
-        ApplyLiftRotation(0f); // Düz konuma getir
-    }
-    private void ApplyLiftRotation(float tiltX)
-    {
-        // Z ekseni (yan eğim) yine delta'ya bağlı
-        float delta = targetX - transform.position.x;
-        float targetTiltZ = Mathf.Clamp(delta * tiltAmount, -tiltAmount, tiltAmount);
+        if (lensDistortion != null)
+        {
+            // Hızı normalize et (0 = normal hız, 1 = boost hızı)
+            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
 
-        Quaternion targetRotation = startRotation * Quaternion.Euler(tiltX, 0f, targetTiltZ);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * tiltSmooth);
+            // Hıza bağlı olarak intensity'yi ayarla (0 → -0.5)
+            float targetDistortion = Mathf.Lerp(0f, -0.5f, speedRatio);
+
+            // Uygula
+            lensDistortion.intensity.value = targetDistortion;
+        }
+        // Yatış açısını belirle
+        float targetZRotation = 0f;
+        if (moveDirection == 1)
+            targetZRotation = -tiltAmount;
+        else if (moveDirection == -1)
+            targetZRotation = tiltAmount;
+
+        Quaternion targetRotation = Quaternion.Euler(0f, 0f, targetZRotation);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, tiltSpeed * Time.deltaTime);
     }
+
+    // UI butonları
+    public void MoveRightStart() => moveDirection = 1;
+    public void MoveLeftStart() => moveDirection = -1;
+    public void StopMove() => moveDirection = 0;
+
+    // BOOST buton fonksiyonları
+    public void StartBoost() => isBoosting = true;
+    public void StopBoost() => isBoosting = false;
 }
