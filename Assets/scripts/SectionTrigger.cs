@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class SectionTrigger : MonoBehaviour
 {
-    public GameObject roadPrefab;
+    public GameObject[] roadPrefabs; // Birden fazla prefab atanabilir
 
     private static Vector3 spawnPosition = new Vector3(43, 291, -1407);
     private static float zOffset = -842f;
@@ -21,15 +21,16 @@ public class SectionTrigger : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
 
-        GameObject newRoad = Instantiate(roadPrefab, spawnPosition, Quaternion.identity);
+        GameObject selectedPrefab = RoadManager.Instance.GetRandomRoad();
+
+        GameObject newRoad = Instantiate(selectedPrefab, spawnPosition, Quaternion.identity);
         newRoad.name = "Road";
+
         spawnPosition.z += zOffset;
-
-        // 8 saniye sonra yok et
         Destroy(newRoad, 50f);
-
         Destroy(gameObject);
     }
+
 
     public static void ResetStatics()
     {
