@@ -54,8 +54,8 @@ public class CarMovement : MonoBehaviour
         float targetSpeed = isBoosting ? boostedSpeed : forwardSpeed;
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * Time.deltaTime);
 
-        // Sürekli ileri hareket (Z ↓)
-        transform.Translate(Vector3.back * currentSpeed * Time.deltaTime);
+       // Sürekli Z yönünde ileri hareket (negatif Z)
+        transform.position += new Vector3(0f, 0f, -currentSpeed * Time.deltaTime);
 
         // Sağa–sola hareket
         if (moveDirection != 0)
