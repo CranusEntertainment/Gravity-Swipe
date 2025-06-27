@@ -4,15 +4,26 @@ using UnityEngine.UI;
 public class ScoreManager : MonoBehaviour
 {
     public Text scoreText;
-    public CarMovement carMovement; // Arabadan hýz bilgisini alacaðýz
+    public Text highScoreText; // Game Over ekranÄ± iÃ§in
+    public Text highScoreDisplayText; // Oyun iÃ§i sÃ¼rekli gÃ¶rÃ¼nen
 
-    public float baseScoreIncreaseSpeed = 30f; // Normal skor artýþ hýzý
+    public CarMovement carMovement;
+
+    public float baseScoreIncreaseSpeed = 30f;
     public float lerpSpeed = 5f;
 
     public float scaleUpAmount = 1.2f;
     public float scaleSpeed = 10f;
 
-    // Arcade renk paleti (isteðe baðlý)
+    private int highScore = 0;
+    private float currentScore = 0f;
+    private float displayedScore = 0f;
+    private bool scaleUp = false;
+    private int lastColorChangeScore = 0;
+
+    private bool isBoostFireActive = false;
+    private float fireAnimTimer = 0f;
+
     private Color[] arcadeColors = new Color[]
     {
         new Color(1f, 0.1f, 0.1f),
@@ -23,44 +34,57 @@ public class ScoreManager : MonoBehaviour
         new Color(0.7f, 0.2f, 1f),
     };
 
-    private float currentScore = 0f;
-    private float displayedScore = 0f;
+    void Start()
+    {
+        // VarsayÄ±lan text referansÄ±
+        if (scoreText == null)
+            scoreText = GetComponent<Text>();
 
-    private bool scaleUp = false;
-    private int lastColorChangeScore = 0;
+        // HighScore'u yÃ¼kle
+        highScore = PlayerPrefs.GetInt("HighScore", 0);
 
-    // Ateþ animasyonu için
-    private bool isBoostFireActive = false;
-    private float fireAnimTimer = 0f;
-    private float fireAnimDuration = 1f;
+        if (highScoreDisplayText != null)
+            highScoreDisplayText.text = "BEST: " + highScore.ToString();
+
+        if (highScoreText != null)
+            highScoreText.text = "HIGH SCORE: " + highScore.ToString();
+
+        // BaÅŸlangÄ±Ã§ rengi
+        scoreText.color = Color.white;
+    }
 
     void Update()
     {
         if (carMovement == null)
             return;
 
-        // Arabadan hýzý al, normalize et (0-1 arasý)
         float speedRatio = Mathf.InverseLerp(carMovement.forwardSpeed, carMovement.boostedSpeed, carMovement.currentSpeed);
-
-        // Skor artýþ hýzýný hýz oranýna göre ayarla
         float scoreIncreaseSpeed = Mathf.Lerp(baseScoreIncreaseSpeed, baseScoreIncreaseSpeed * 3f, speedRatio);
-        // Boosttayken 3 kat hýzlandýrdýk (dilediðin gibi deðiþtir)
 
-        // Skoru sürekli arttýr
         currentScore += scoreIncreaseSpeed * Time.deltaTime;
-
-        // Skoru yumuþakça göster
         displayedScore = Mathf.Lerp(displayedScore, currentScore, lerpSpeed * Time.deltaTime);
-        int displayInt = Mathf.FloorToInt(displayedScore);
+
+        int displayInt = Mathf.FloorToInt(displayedScore); // Bunu yukarÄ± taÅŸÄ±dÄ±k
         scoreText.text = displayInt.ToString();
 
-        // Animasyon tetikleme
-        if (!scaleUp && Mathf.Abs(currentScore - displayedScore) > 1f)
+        // High Score kontrolÃ¼
+        if (displayInt > highScore)
         {
-            scaleUp = true;
+            highScore = displayInt;
+            PlayerPrefs.SetInt("HighScore", highScore);
+            PlayerPrefs.Save();
+
+            if (highScoreDisplayText != null)
+                highScoreDisplayText.text = "BEST: " + highScore.ToString();
+
+            if (highScoreText != null)
+                highScoreText.text = "HIGH SCORE: " + highScore.ToString();
         }
 
-        // Scale animasyonu
+        // Skor font bÃ¼yÃ¼me animasyonu
+        if (!scaleUp && Mathf.Abs(currentScore - displayedScore) > 1f)
+            scaleUp = true;
+
         if (scaleUp)
         {
             scoreText.transform.localScale = Vector3.Lerp(scoreText.transform.localScale, Vector3.one * scaleUpAmount, scaleSpeed * Time.deltaTime);
@@ -72,15 +96,15 @@ public class ScoreManager : MonoBehaviour
             scoreText.transform.localScale = Vector3.Lerp(scoreText.transform.localScale, Vector3.one, scaleSpeed * Time.deltaTime);
         }
 
-        // Her 100 puanda renk deðiþtir (opsiyonel)
+        // Renk deÄŸiÅŸtirme
         if (displayInt / 100 > lastColorChangeScore / 100)
         {
             ChangeToRandomArcadeColor();
             lastColorChangeScore = displayInt;
         }
 
-        // Hýz boosttayken ateþ animasyonu uygula
-        if (speedRatio > 0.9f) // %90 ve üstü hýzda ateþ animasyonu
+        // AteÅŸ animasyonu
+        if (speedRatio > 0.9f)
         {
             if (!isBoostFireActive)
             {
@@ -102,16 +126,13 @@ public class ScoreManager : MonoBehaviour
     void PlayFireAnimation()
     {
         fireAnimTimer += Time.deltaTime;
-
-        // Basit yanýp sönen kýrmýzý-sarý renk animasyonu
-        float t = Mathf.PingPong(fireAnimTimer * 5f, 1f); // 5 kez/sn yanýp söner
+        float t = Mathf.PingPong(fireAnimTimer * 5f, 1f);
         Color fireColor = Color.Lerp(Color.red, Color.yellow, t);
         scoreText.color = fireColor;
     }
 
     void ResetFireAnimation()
     {
-        // Rengi varsayýlan arcade renklerinden rastgele atayalým
         ChangeToRandomArcadeColor();
     }
 

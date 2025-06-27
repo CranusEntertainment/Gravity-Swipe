@@ -1,15 +1,15 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class PlayerCollisionHandler : MonoBehaviour
 {
     [Header("Game Over Paneli")]
     public GameObject gameOverPanel;
+    public Text highScoreText;
 
     private void Start()
     {
-        // Oyun baþýnda panel kapalý olsun
         gameOverPanel.SetActive(false);
     }
 
@@ -17,21 +17,25 @@ public class PlayerCollisionHandler : MonoBehaviour
     {
         if (other.CompareTag("EnemyCar"))
         {
-            Debug.Log("Çarpýþma oldu! Oyun bitiyor...");
+            Debug.Log("Ã‡arpÄ±ÅŸma oldu! Oyun bitiyor...");
             GameOver();
         }
     }
 
     void GameOver()
     {
-        Time.timeScale = 0f; // Oyunu durdur
-        gameOverPanel.SetActive(true); // Paneli göster
+
+        
+        Time.timeScale = 0f;
+        gameOverPanel.SetActive(true);
+
+        int highScore = PlayerPrefs.GetInt("HighScore", 0);
+        highScoreText.text = "HIGH SCORE: " + highScore.ToString();
     }
 
-    // Bu fonksiyonu butonla çaðýracaðýz
     public void RestartLevel()
     {
-        Time.timeScale = 1f; // Zamaný sýfýrdan çýkar
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
