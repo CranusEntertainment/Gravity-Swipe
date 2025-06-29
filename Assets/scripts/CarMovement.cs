@@ -26,6 +26,11 @@ public class CarMovement : MonoBehaviour
     private ChromaticAberration chromaticAberration; // Yeni efekt
     private MotionBlur motionBlur;
 
+    [Header("Ses Ayarları")]
+    public AudioSource engineAudioSource;
+    public float minPitch = 0.8f;
+    public float maxPitch = 1.5f;
+
 
     private int moveDirection = 0; // -1: sola, 1: sağa, 0: düz
     private bool isBoosting = false;
@@ -46,15 +51,26 @@ public class CarMovement : MonoBehaviour
         {
             chromaticAberration.intensity.value = 0f; // Başlangıçta kapalı
         }
+        // Motor sesi başlat
+        if (engineAudioSource != null)
+            engineAudioSource.Play();
+
     }
 
     void Update()
     {
+        // Motor sesi pitch ayarı (speed'e göre)
+        if (engineAudioSource != null)
+        {
+            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
+            engineAudioSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
+        }
+
         // Boost kontrolü (yumuşak geçişli hız değişimi)
         float targetSpeed = isBoosting ? boostedSpeed : forwardSpeed;
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * Time.deltaTime);
 
-       // Sürekli Z yönünde ileri hareket (negatif Z)
+        // Sürekli Z yönünde ileri hareket (negatif Z)
         transform.position += new Vector3(0f, 0f, -currentSpeed * Time.deltaTime);
 
         // Sağa–sola hareket
