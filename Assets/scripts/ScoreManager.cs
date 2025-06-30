@@ -4,8 +4,8 @@ using UnityEngine.UI;
 public class ScoreManager : MonoBehaviour
 {
     public Text scoreText;
-    public Text highScoreText; // Game Over ekranı için
-    public Text highScoreDisplayText; // Oyun içi sürekli görünen
+    public Text highScoreText;
+    public Text highScoreDisplayText;
 
     public CarMovement carMovement;
 
@@ -18,11 +18,15 @@ public class ScoreManager : MonoBehaviour
     private int highScore = 0;
     private float currentScore = 0f;
     private float displayedScore = 0f;
+    private int displayedInt = 0;
+
     private bool scaleUp = false;
     private int lastColorChangeScore = 0;
 
     private bool isBoostFireActive = false;
     private float fireAnimTimer = 0f;
+
+    private Vector3 targetScaleUp, targetScaleNormal;
 
     private Color[] arcadeColors = new Color[]
     {
@@ -36,74 +40,77 @@ public class ScoreManager : MonoBehaviour
 
     void Start()
     {
-        // Varsayılan text referansı
         if (scoreText == null)
             scoreText = GetComponent<Text>();
 
-        // HighScore'u yükle
         highScore = PlayerPrefs.GetInt("HighScore", 0);
 
+        string highScoreStr = highScore.ToString();
+
         if (highScoreDisplayText != null)
-            highScoreDisplayText.text = "BEST: " + highScore.ToString();
+            highScoreDisplayText.text = "BEST: " + highScoreStr;
 
         if (highScoreText != null)
-            highScoreText.text = "HIGH SCORE: " + highScore.ToString();
+            highScoreText.text = "HIGH SCORE: " + highScoreStr;
 
-        // Başlangıç rengi
         scoreText.color = Color.white;
+
+        targetScaleUp = Vector3.one * scaleUpAmount;
+        targetScaleNormal = Vector3.one;
     }
 
     void Update()
     {
-        if (carMovement == null)
-            return;
+        if (carMovement == null) return;
+
+        float delta = Time.deltaTime;
 
         float speedRatio = Mathf.InverseLerp(carMovement.forwardSpeed, carMovement.boostedSpeed, carMovement.currentSpeed);
         float scoreIncreaseSpeed = Mathf.Lerp(baseScoreIncreaseSpeed, baseScoreIncreaseSpeed * 3f, speedRatio);
 
-        currentScore += scoreIncreaseSpeed * Time.deltaTime;
-        displayedScore = Mathf.Lerp(displayedScore, currentScore, lerpSpeed * Time.deltaTime);
+        currentScore += scoreIncreaseSpeed * delta;
+        displayedScore = Mathf.Lerp(displayedScore, currentScore, lerpSpeed * delta);
 
-        int displayInt = Mathf.FloorToInt(displayedScore); // Bunu yukarı taşıdık
-        scoreText.text = displayInt.ToString();
-
-        // High Score kontrolü
-        if (displayInt > highScore)
+        int newDisplayInt = Mathf.FloorToInt(displayedScore);
+        if (newDisplayInt != displayedInt)
         {
-            highScore = displayInt;
-            PlayerPrefs.SetInt("HighScore", highScore);
-            PlayerPrefs.Save();
+            displayedInt = newDisplayInt;
+            scoreText.text = displayedInt.ToString();
 
-            if (highScoreDisplayText != null)
-                highScoreDisplayText.text = "BEST: " + highScore.ToString();
+            if (displayedInt > highScore)
+            {
+                highScore = displayedInt;
+                string highStr = highScore.ToString();
 
-            if (highScoreText != null)
-                highScoreText.text = "HIGH SCORE: " + highScore.ToString();
+                if (highScoreDisplayText != null)
+                    highScoreDisplayText.text = "BEST: " + highStr;
+
+                if (highScoreText != null)
+                    highScoreText.text = "HIGH SCORE: " + highStr;
+
+                PlayerPrefs.SetInt("HighScore", highScore); // Disk'e yaz
+                PlayerPrefs.Save(); // Buraya kadar sadece bir kez çalışır
+            }
+
+            // Yeni skor renk kontrolü (her 100 puanda bir)
+            if (displayedInt / 100 > lastColorChangeScore / 100)
+            {
+                ChangeToRandomArcadeColor();
+                lastColorChangeScore = displayedInt;
+            }
         }
 
-        // Skor font büyüme animasyonu
-        if (!scaleUp && Mathf.Abs(currentScore - displayedScore) > 1f)
+        // Skor yazı büyütme
+        Vector3 currentScale = scoreText.transform.localScale;
+        Vector3 target = scaleUp ? targetScaleUp : targetScaleNormal;
+        scoreText.transform.localScale = Vector3.Lerp(currentScale, target, scaleSpeed * delta);
+
+        if (scaleUp && Vector3.Distance(currentScale, targetScaleUp) < 0.01f)
+            scaleUp = false;
+        else if (!scaleUp && Mathf.Abs(currentScore - displayedScore) > 1f)
             scaleUp = true;
 
-        if (scaleUp)
-        {
-            scoreText.transform.localScale = Vector3.Lerp(scoreText.transform.localScale, Vector3.one * scaleUpAmount, scaleSpeed * Time.deltaTime);
-            if (Vector3.Distance(scoreText.transform.localScale, Vector3.one * scaleUpAmount) < 0.01f)
-                scaleUp = false;
-        }
-        else
-        {
-            scoreText.transform.localScale = Vector3.Lerp(scoreText.transform.localScale, Vector3.one, scaleSpeed * Time.deltaTime);
-        }
-
-        // Renk değiştirme
-        if (displayInt / 100 > lastColorChangeScore / 100)
-        {
-            ChangeToRandomArcadeColor();
-            lastColorChangeScore = displayInt;
-        }
-
-        // Ateş animasyonu
+        // Boost animasyonu
         if (speedRatio > 0.9f)
         {
             if (!isBoostFireActive)
@@ -111,24 +118,20 @@ public class ScoreManager : MonoBehaviour
                 isBoostFireActive = true;
                 fireAnimTimer = 0f;
             }
-            PlayFireAnimation();
+            PlayFireAnimation(delta);
         }
-        else
+        else if (isBoostFireActive)
         {
-            if (isBoostFireActive)
-            {
-                isBoostFireActive = false;
-                ResetFireAnimation();
-            }
+            isBoostFireActive = false;
+            ResetFireAnimation();
         }
     }
 
-    void PlayFireAnimation()
+    void PlayFireAnimation(float delta)
     {
-        fireAnimTimer += Time.deltaTime;
+        fireAnimTimer += delta;
         float t = Mathf.PingPong(fireAnimTimer * 5f, 1f);
-        Color fireColor = Color.Lerp(Color.red, Color.yellow, t);
-        scoreText.color = fireColor;
+        scoreText.color = Color.Lerp(Color.red, Color.yellow, t);
     }
 
     void ResetFireAnimation()
@@ -138,11 +141,14 @@ public class ScoreManager : MonoBehaviour
 
     void ChangeToRandomArcadeColor()
     {
-        Color newColor;
-        do
+        Color current = scoreText.color;
+        Color newColor = arcadeColors[Random.Range(0, arcadeColors.Length)];
+
+        // Direkt karşılaştırma yerine tekrar denemek GC üretir; bu risk düşük, sadece aynı renkse bir kez tekrar denenir.
+        if (newColor == current)
         {
-            newColor = arcadeColors[Random.Range(0, arcadeColors.Length)];
-        } while (newColor == scoreText.color);
+            newColor = arcadeColors[(Random.Range(0, arcadeColors.Length - 1) + 1) % arcadeColors.Length];
+        }
 
         scoreText.color = newColor;
     }

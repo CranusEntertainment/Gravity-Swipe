@@ -6,10 +6,9 @@ public class CarMovement : MonoBehaviour
 {
     [Header("İleri Gitme (Z ekseni azalacak)")]
     public float forwardSpeed = 10f;
-    public float boostedSpeed = 20f; // Boost aktifkenki hız
-    public float boostLerpSpeed = 5f; // Hız geçiş yumuşaklığı
-
-    public float currentSpeed; // Gerçek zamanlı ileri hızı
+    public float boostedSpeed = 20f;
+    public float boostLerpSpeed = 5f;
+    public float currentSpeed;
 
     [Header("Sağa–Sola Hareket")]
     public float sideSpeed = 5f;
@@ -23,7 +22,7 @@ public class CarMovement : MonoBehaviour
     [Header("Post-Processing Ayarları")]
     public Volume globalVolume;
     private LensDistortion lensDistortion;
-    private ChromaticAberration chromaticAberration; // Yeni efekt
+    private ChromaticAberration chromaticAberration;
     private MotionBlur motionBlur;
 
     [Header("Ses Ayarları")]
@@ -31,79 +30,82 @@ public class CarMovement : MonoBehaviour
     public float minPitch = 0.8f;
     public float maxPitch = 1.5f;
 
+    [Header("Trail Ayarları")]
+    public TrailRenderer rightBoostTrail;
+    public TrailRenderer leftBoostTrail;
+    public float defaultTrailTime = 0.2f;
+    public float boostedTrailTime = 1.5f;
+    public float trailLerpSpeed = 5f;
 
-    private int moveDirection = 0; // -1: sola, 1: sağa, 0: düz
+    private int moveDirection = 0;
     private bool isBoosting = false;
 
     void Start()
     {
         currentSpeed = forwardSpeed;
-        if (globalVolume != null && globalVolume.profile.TryGet(out lensDistortion))
+
+        if (globalVolume != null)
         {
-            lensDistortion.intensity.value = 0f;
+            globalVolume.profile.TryGet(out lensDistortion);
+            globalVolume.profile.TryGet(out chromaticAberration);
+            globalVolume.profile.TryGet(out motionBlur);
+
+            if (lensDistortion != null) lensDistortion.intensity.value = 0f;
+            if (motionBlur != null) motionBlur.intensity.value = 0f;
+            if (chromaticAberration != null) chromaticAberration.intensity.value = 0f;
         }
-        if (globalVolume != null && globalVolume.profile.TryGet(out motionBlur))
-        {
-            motionBlur.intensity.value = 0f; // Başlangıçta kapalı
-        }
-        // Chromatic Aberration bileşenini al
-        if (globalVolume != null && globalVolume.profile.TryGet(out chromaticAberration))
-        {
-            chromaticAberration.intensity.value = 0f; // Başlangıçta kapalı
-        }
-        // Motor sesi başlat
+
         if (engineAudioSource != null)
             engineAudioSource.Play();
 
+        if (rightBoostTrail != null)
+            rightBoostTrail.time = defaultTrailTime;
+        if (leftBoostTrail != null)
+            leftBoostTrail.time = defaultTrailTime;
     }
 
     void Update()
     {
-        // Motor sesi pitch ayarı (speed'e göre)
-        if (engineAudioSource != null)
-        {
-            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
-            engineAudioSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
-        }
-
-        // Boost kontrolü (yumuşak geçişli hız değişimi)
+        float delta = Time.deltaTime;
+        float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
         float targetSpeed = isBoosting ? boostedSpeed : forwardSpeed;
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * Time.deltaTime);
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * delta);
 
-        // Sürekli Z yönünde ileri hareket (negatif Z)
-        transform.position += new Vector3(0f, 0f, -currentSpeed * Time.deltaTime);
+        // Motor sesi
+        if (engineAudioSource != null)
+            engineAudioSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
 
-        // Sağa–sola hareket
+        // Hareket
+        Vector3 pos = transform.position;
+        pos.z -= currentSpeed * delta;
+
         if (moveDirection != 0)
         {
-            float xMove = moveDirection * sideSpeed * Time.deltaTime;
-            Vector3 newPos = transform.position + new Vector3(xMove, 0f, 0f);
-            newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
-            transform.position = newPos;
+            pos.x += moveDirection * sideSpeed * delta;
+            pos.x = Mathf.Clamp(pos.x, minX, maxX);
         }
+        transform.position = pos;
 
+        // Görsel efektler
         if (lensDistortion != null)
-        {
-            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
-            float targetDistortion = Mathf.Lerp(0f, -0.5f, speedRatio);
-            lensDistortion.intensity.value = targetDistortion;
-        }
+            lensDistortion.intensity.value = Mathf.Lerp(0f, -0.5f, speedRatio);
 
-        if (chromaticAberration != null)
-        {
-            // Hız arttıkça bulanıklık şiddetini artır
-            float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
+        if (motionBlur != null)
             motionBlur.intensity.value = Mathf.Lerp(0f, 0.5f, speedRatio);
-        }
-        // Yatış açısını belirle
-        float targetZRotation = 0f;
-        if (moveDirection == 1)
-            targetZRotation = -tiltAmount;
-        else if (moveDirection == -1)
-            targetZRotation = tiltAmount;
 
+        // Yatış efekti
+        float targetZRotation = moveDirection == 1 ? -tiltAmount : moveDirection == -1 ? tiltAmount : 0f;
         Quaternion targetRotation = Quaternion.Euler(0f, 0f, targetZRotation);
-        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, tiltSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, tiltSpeed * delta);
+
+        // Trail boylarını boost durumuna göre güncelle
+        float targetTrailTime = isBoosting ? boostedTrailTime : defaultTrailTime;
+
+        if (rightBoostTrail != null)
+            rightBoostTrail.time = Mathf.Lerp(rightBoostTrail.time, targetTrailTime, trailLerpSpeed * delta);
+
+        if (leftBoostTrail != null)
+            leftBoostTrail.time = Mathf.Lerp(leftBoostTrail.time, targetTrailTime, trailLerpSpeed * delta);
     }
 
     // UI butonları
@@ -111,7 +113,7 @@ public class CarMovement : MonoBehaviour
     public void MoveLeftStart() => moveDirection = -1;
     public void StopMove() => moveDirection = 0;
 
-    // BOOST buton fonksiyonları
     public void StartBoost() => isBoosting = true;
+
     public void StopBoost() => isBoosting = false;
 }
